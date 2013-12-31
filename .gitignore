@@ -1,0 +1,41 @@
+## generic files to ignore
+*~
+*.lock
+*.DS_Store
+*.swp
+*.out
+
+# java specific
+*.class
+
+# sbt specific
+project/boot
+lib_managed/*
+project/build/target
+project/build/lib_managed
+project/build/src_managed
+project/plugins/lib_managed
+project/plugins/target
+project/plugins/src_managed
+project/plugins/project
+
+target
+.idea
+.settings
+.classpath
+.project
+.ensime*
+*.sublime-*
+.cache
+.lib
+data
+.tags
+.tags_sorted_by_file
+.projectile
+idea
+caprica.conf
+localConfig.conf
+defaultLocal.conf
+jmeter.log
+euro_resolver.sbt
+atlassian-ide-plugin.xml
