@@ -5,7 +5,7 @@ import scalaz.Ordering._
 import scala.annotation.tailrec
 import scalaz.syntax.monad._
 
-case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]]) {
+case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]], maxThere: Int) {
   import BinomialHeap._
   import Maybe._
 
@@ -15,11 +15,11 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]]) {
   def insert(a: A)(implicit order: Order[A]): BinomialHeap[A] = insertTree(BinomialTree.singleton(a))
 
   def insertTree(tree: BinomialTree[A])(implicit order: Order[A]): BinomialHeap[A] = {
-    val newTrees = Array.fill[Maybe[BinomialTree[A]]](Math.min(trees.length,tree.rank + 1))(NotThere)
+    val newTrees = Array.fill[Maybe[BinomialTree[A]]](Math.max(maxThere + 1,tree.rank + 1)+1)(NotThere)
     trees.copyToArray(newTrees)
 
-    _insertTree(tree, newTrees)
-    BinomialHeap(newTrees)
+    val newMaxThere = math.max(maxThere, _insertTree(tree, newTrees))
+    BinomialHeap(newTrees, newMaxThere)
   }
 
   def headMaybe(implicit order: Order[A]): Maybe[A] = {
@@ -38,7 +38,7 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]]) {
         t ← topt
       } _insertTree(t, newTrees)
       removedOpt >>= { removed ⇒
-        There((removed.value, BinomialHeap(newTrees)))
+        There((removed.value, BinomialHeap(newTrees, maxThere))) // is maxThere optimalHere?
       }
     }
   }
@@ -47,13 +47,15 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]]) {
 }
 
 object BinomialHeap {
-  def empty[A]: BinomialHeap[A] = BinomialHeap(new Array[Maybe[BinomialTree[A]]](0))
+  def empty[A]: BinomialHeap[A] = BinomialHeap(new Array[Maybe[BinomialTree[A]]](0), 0)
 
   @tailrec
-  def _insertTree[A](tree: BinomialTree[A], newTrees: Array[Maybe[BinomialTree[A]]])(implicit order: Order[A]) {
+  def _insertTree[A](tree: BinomialTree[A], newTrees: Array[Maybe[BinomialTree[A]]])(implicit order: Order[A]): Int = {
     val oldTree = newTrees(tree.rank)
     oldTree match {
-      case NotThere ⇒ newTrees(tree.rank) = There(tree)
+      case NotThere ⇒ 
+        newTrees(tree.rank) = There(tree)
+        tree.rank
       case There(other) ⇒
         val merged = _mergeTrees(tree, other)
         newTrees(tree.rank) = NotThere
@@ -62,16 +64,17 @@ object BinomialHeap {
   }
 
   @tailrec
-  def _findMinTree[A: Order](r: Maybe[(Int, BinomialTree[A])], as: Array[Maybe[BinomialTree[A]]], i: Int): Maybe[(Int, BinomialTree[A])] =
+  def _findMinTree[A: Order](r: Maybe[(Int, BinomialTree[A])], as: Array[Maybe[BinomialTree[A]]], i: Int): Maybe[(Int, BinomialTree[A])] = {
     if(i >= as.length) r
     else (r, as(i)) match {
       case (NotThere, NotThere) ⇒ _findMinTree(NotThere, as, i+1)
       case (NotThere, There(y)) ⇒ _findMinTree(There((i,y)), as, i+1)
       case (x, NotThere) ⇒ _findMinTree(x, as, i+1)
-      case (There((i,x)), There(y)) ⇒ 
+      case (There((_,x)), There(y)) ⇒ 
         if(Order[A].apply(x.value, y.value) == GT) _findMinTree(There((i,y)), as, i+1)
         else _findMinTree(r, as, i+1)
     }
+  }
 
 
   def _mergeTrees[A: Order](a: BinomialTree[A], b: BinomialTree[A]): BinomialTree[A] = {
@@ -79,11 +82,11 @@ object BinomialHeap {
     if(Order[A].apply(a.value, b.value) == GT) {
       b.children.trees.copyToArray(newChildren, 1)
       newChildren(0) = There(a)
-      BinomialTree(a.rank+1, b.value, BinomialHeap(newChildren))
+      BinomialTree(a.rank+1, b.value, BinomialHeap(newChildren, newChildren.length-1))
     } else {
       a.children.trees.copyToArray(newChildren, 1)
       newChildren(0) = There(b)
-      BinomialTree(a.rank+1, a.value, BinomialHeap(newChildren))
+      BinomialTree(a.rank+1, a.value, BinomialHeap(newChildren, newChildren.length-1))
     }
   }
 }
@@ -92,6 +95,6 @@ object BinomialHeap {
 case class BinomialTree[A](rank: Int, value: A, children: BinomialHeap[A])
 
 object BinomialTree {
-  def singleton[A](a: A) = BinomialTree(0, a, BinomialHeap(new Array[Maybe[BinomialTree[A]]](0)))
+  def singleton[A](a: A) = BinomialTree(0, a, BinomialHeap(new Array[Maybe[BinomialTree[A]]](0), 0))
 }
 
