@@ -10,6 +10,11 @@ sealed trait Maybe[+A] {
     case NotThere ⇒ notThere
   }
 
+  final def foreach(f: A⇒Unit): Unit = this match {
+    case There(a) ⇒ f(a)
+    case _ ⇒
+  }
+
   final def filter(f: A⇒Boolean): Maybe[A] = this match {
     case t @ There(a) ⇒ if(f(a)) t else NotThere
     case NotThere ⇒ NotThere
@@ -66,6 +71,13 @@ object Maybe {
     case Some(x) ⇒ There(x)
     case None ⇒ NotThere
   }
+
+  // this totally doesn't belong here but on some stream class
+  def unfold[A, B](seed: A)(f: A => Maybe[(B, A)]): Stream[B] =
+    f(seed) match {
+      case NotThere         => Stream.empty
+      case There((b, a)) => Stream.cons(b, unfold(a)(f))
+    }
 
   import scalaz.MonadPlus
   implicit val maybeInstances: MonadPlus[Maybe] = new MonadPlus[Maybe] {

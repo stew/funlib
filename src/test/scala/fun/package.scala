@@ -10,7 +10,7 @@ package object test {
   }
 
   import scalaz.Order
-  implicit def arbitraryHeap[A: Arbitrary: Order]: Arbitrary[Heap[A]] = Arbitrary {
-    arbitrary[List[A]].map(_.foldLeft[Heap[A]](Heap.empty)((h,i) ⇒ h.insert(i)))
+  implicit def arbitraryLeftHeap[A: Arbitrary: Order]: Arbitrary[LeftHeap[A]] = Arbitrary {
+    arbitrary[List[A]].map(_.foldLeft[LeftHeap[A]](LeftHeap.empty)((h,i) ⇒ h.insert(i)))
   }
 }
