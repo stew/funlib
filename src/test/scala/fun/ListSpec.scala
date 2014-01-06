@@ -23,7 +23,7 @@ object ListSpec extends Properties("Lst") {
 
   property("isEmpty") = forAll((a: List[String]) => a.isEmpty == Lst.fromList(a).isEmpty)
   property("nonEmpty") = forAll((a: List[String]) => a.nonEmpty == Lst.fromList(a).nonEmpty)
-  property("headOption") = forAll((a: List[String]) => Maybe.fromOption(a.headOption) == Lst.fromList(a).headOption)
+  property("headMaybe") = forAll((a: List[String]) => Maybe.fromOption(a.headOption) == Lst.fromList(a).headMaybe)
 
   property("sum with foldl") = forAll((a: List[Int]) ⇒ a.sum == Lst.fromList(a).foldl[Int]((_ + _), 0))
   property("sum with foldr") = forAll((a: List[Int]) ⇒ a.sum == Lst.fromList(a).foldr[Int]((_ + _), 0))

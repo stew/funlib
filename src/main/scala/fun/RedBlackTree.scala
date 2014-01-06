@@ -3,7 +3,6 @@ package fun
 import scalaz.Order
 import scalaz.Ordering._
 
-
 trait RedBlackTree[A] {
   import RedBlackTree._
 

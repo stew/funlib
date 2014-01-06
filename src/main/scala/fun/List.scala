@@ -6,7 +6,7 @@ import scalaz.{MonadPlus,Monoid,Show,Cord,Equal,Cobind}
 sealed trait Lst[A] {
   def isEmpty: Boolean
   def nonEmpty: Boolean
-  def headOption: Maybe[A]
+  def headMaybe: Maybe[A]
 
   final def ::(head: A) = Cons(head, this)
 
@@ -30,13 +30,13 @@ sealed trait Lst[A] {
 final case class Cons[A](head: A, tail: Lst[A]) extends Lst[A] {
   override def isEmpty = false
   override def nonEmpty = true
-  override def headOption = There(head)
+  override def headMaybe = There(head)
 }
 
 final case object End extends Lst[Nothing] {
   override val isEmpty = true
   override val nonEmpty = false
-  override val headOption = NotThere
+  override val headMaybe = NotThere
 
   def unapply[A](l: Lst[A]) = l.isEmpty
   def apply[A]() = this.asInstanceOf[Lst[A]] // YOLO

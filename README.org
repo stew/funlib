@@ -1,3 +1,8 @@
 This reposiroty is for personal experimentation.  It's where I'll by
 trying to implement the exercises from [[http://www.amazon.com/Purely-Functional-Structures-Chris-Okasaki-ebook/dp/B00AKE1V04][Purely Functional Data
 Structures]] by Chris Okasaki.
+
+I'm attempting to implement all these without using anything from the
+scala standard library, so I'm implementing my own type to replace
+Option, List, Stream, etc. My versions of these types will all be
+invariant instead of covariant.
