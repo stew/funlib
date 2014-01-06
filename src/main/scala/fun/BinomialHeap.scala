@@ -15,7 +15,7 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]], maxThere: Int) 
   def insert(a: A)(implicit order: Order[A]): BinomialHeap[A] = insertTree(BinomialTree.singleton(a))
 
   def insertTree(tree: BinomialTree[A])(implicit order: Order[A]): BinomialHeap[A] = {
-    val newTrees = Array.fill[Maybe[BinomialTree[A]]](Math.max(maxThere + 1,tree.rank + 1)+1)(NotThere)
+    val newTrees = Array.fill[Maybe[BinomialTree[A]]](Math.max(maxThere + 1,tree.rank + 1)+1)(NotThere())
     trees.copyToArray(newTrees)
 
     val newMaxThere = math.max(maxThere, _insertTree(tree, newTrees))
@@ -23,15 +23,15 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]], maxThere: Int) 
   }
 
   def headMaybe(implicit order: Order[A]): Maybe[A] = {
-    _findMinTree(NotThere, trees, 0) map { t ⇒ t._2.value }
+    _findMinTree[A](NotThere(), trees, 0) map { t ⇒ t._2.value }
   }
 
   def uncons(implicit order: Order[A]): Maybe[(A,BinomialHeap[A])] = {
-    val minTree = _findMinTree(NotThere, trees, 0)
+    val minTree = _findMinTree[A](NotThere(), trees, 0)
     minTree >>= { mt ⇒ 
       val newTrees = trees.clone
       val removedOpt = trees(mt._1)
-      newTrees(mt._1) = NotThere
+      newTrees(mt._1) = NotThere()
       for {
         removed ← removedOpt
         topt ← removed.children.trees
@@ -43,7 +43,7 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]], maxThere: Int) 
     }
   }
 
-  def toStream(implicit order: Order[A]): Stream[A] = Maybe.unfold(this)(_.uncons)
+  def toStream(implicit order: Order[A]): Streem[A] = Streem.unfold(this)(_.uncons)
 }
 
 object BinomialHeap {
@@ -53,12 +53,12 @@ object BinomialHeap {
   def _insertTree[A](tree: BinomialTree[A], newTrees: Array[Maybe[BinomialTree[A]]])(implicit order: Order[A]): Int = {
     val oldTree = newTrees(tree.rank)
     oldTree match {
-      case NotThere ⇒ 
+      case NotThere() ⇒ 
         newTrees(tree.rank) = There(tree)
         tree.rank
       case There(other) ⇒
         val merged = _mergeTrees(tree, other)
-        newTrees(tree.rank) = NotThere
+        newTrees(tree.rank) = NotThere()
         _insertTree(merged, newTrees)
     }
   }
@@ -67,9 +67,9 @@ object BinomialHeap {
   def _findMinTree[A: Order](r: Maybe[(Int, BinomialTree[A])], as: Array[Maybe[BinomialTree[A]]], i: Int): Maybe[(Int, BinomialTree[A])] = {
     if(i >= as.length) r
     else (r, as(i)) match {
-      case (NotThere, NotThere) ⇒ _findMinTree(NotThere, as, i+1)
-      case (NotThere, There(y)) ⇒ _findMinTree(There((i,y)), as, i+1)
-      case (x, NotThere) ⇒ _findMinTree(x, as, i+1)
+      case (NotThere(), NotThere()) ⇒ _findMinTree(NotThere(), as, i+1)
+      case (NotThere(), There(y)) ⇒ _findMinTree(There((i,y)), as, i+1)
+      case (x, NotThere()) ⇒ _findMinTree(x, as, i+1)
       case (There((_,x)), There(y)) ⇒ 
         if(Order[A].apply(x.value, y.value) == GT) _findMinTree(There((i,y)), as, i+1)
         else _findMinTree(r, as, i+1)

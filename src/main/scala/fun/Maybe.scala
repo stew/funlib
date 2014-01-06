@@ -1,13 +1,13 @@
 package fun
 
-sealed trait Maybe[+A] {
+sealed trait Maybe[A] {
   def isDefined: Boolean
   def isEmpty: Boolean
   def nonEmpty: Boolean
 
   final def cata[X](there: A⇒X, notThere: ⇒ X): X = this match {
     case There(a) ⇒ there(a)
-    case NotThere ⇒ notThere
+    case NotThere() ⇒ notThere
   }
 
   final def foreach(f: A⇒Unit): Unit = this match {
@@ -16,27 +16,27 @@ sealed trait Maybe[+A] {
   }
 
   final def filter(f: A⇒Boolean): Maybe[A] = this match {
-    case t @ There(a) ⇒ if(f(a)) t else NotThere
-    case NotThere ⇒ NotThere
+    case t @ There(a) ⇒ if(f(a)) t else NotThere()
+    case _ ⇒ this
   }
 
-  final def orElse[AA >: A](a: ⇒ Maybe[AA]): Maybe[AA] = this match {
+  final def orElse(a: ⇒ Maybe[A]): Maybe[A] = this match {
     case t @ There(_) ⇒ t
-    case NotThere ⇒ a
+    case NotThere() ⇒ a
   }
 
-  final def |||[AA >: A](a: ⇒ Maybe[AA]): Maybe[AA] = this orElse a
+  final def |||(a: ⇒ Maybe[A]): Maybe[A] = this orElse a
 
   def getOrElse[AA >: A](a: ⇒ AA): AA = this match {
     case There(t) ⇒ t
-    case NotThere ⇒ a
+    case NotThere() ⇒ a
   }
 
   def |[AA >: A](a: ⇒ AA): AA = this getOrElse a
 
   final def toOption: Option[A] = this match {
     case There(x) ⇒ Some(x)
-    case NotThere ⇒ None
+    case NotThere() ⇒ None
   }
 
   import scalaz.{\/,-\/,\/-,Validation,Success,Failure}
@@ -63,19 +63,19 @@ sealed trait Maybe[+A] {
 
 import scalaz.Equal
 object Maybe {
-  def not[A]: Maybe[A] = NotThere
+  def not[A]: Maybe[A] = NotThere()
 
-  def fromMaybeNull[A <: AnyRef](a: A): Maybe[A] = if(a == null) NotThere else There(a)
+  def fromMaybeNull[A <: AnyRef](a: A): Maybe[A] = if(a == null) NotThere() else There(a)
 
   def fromOption[A](l: Option[A]): Maybe[A] = l match {
     case Some(x) ⇒ There(x)
-    case None ⇒ NotThere
+    case None ⇒ NotThere()
   }
 
   // this totally doesn't belong here but on some stream class
   def unfold[A, B](seed: A)(f: A => Maybe[(B, A)]): Stream[B] =
     f(seed) match {
-      case NotThere         => Stream.empty
+      case NotThere()         => Stream.empty
       case There((b, a)) => Stream.cons(b, unfold(a)(f))
     }
 
@@ -84,21 +84,21 @@ object Maybe {
     override def point[A](a: ⇒ A): Maybe[A] = There(a)
     override def map[A,B](fa: Maybe[A])(f: A⇒B): Maybe[B] = fa match {
       case There(a) ⇒ There(f(a))
-      case NotThere ⇒ NotThere
+      case _ ⇒ NotThere()
     }
 
     override def bind[A,B](fa: Maybe[A])(f: A⇒Maybe[B]): Maybe[B] = fa match {
       case There(a) ⇒ f(a)
-      case NotThere ⇒ NotThere
+      case NotThere ⇒ NotThere()
     }
 
-    override def empty[A] = NotThere
+    override def empty[A] = NotThere()
     override def plus[A](a: Maybe[A], b: ⇒ Maybe[A]) = a orElse b
   }
 
   import scalaz.Monoid
   implicit def maybeMonoid[A:Monoid]: Monoid[Maybe[A]] = new Monoid[Maybe[A]] {
-    override def zero = NotThere
+    override def zero = NotThere()
     override def append(fa: Maybe[A], fb: ⇒ Maybe[A]) = fa match {
       case There(a) ⇒ fb match {
         case There(b) ⇒ There(Monoid[A].append(a,b))
@@ -114,7 +114,7 @@ object Maybe {
 }
 
 
-final case class There[+A](get: A) extends Maybe[A] {
+final case class There[A](get: A) extends Maybe[A] {
   override def isDefined: Boolean = true
   override def isEmpty: Boolean = false
   override def nonEmpty: Boolean = true
@@ -125,6 +125,9 @@ final case object NotThere extends Maybe[Nothing] {
   override val isDefined: Boolean = false
   override val isEmpty: Boolean = true
   override val nonEmpty: Boolean = false
+
+  def unapply[A](m: Maybe[A]) = m.isEmpty
+  def apply[A](): Maybe[A] = this.asInstanceOf[Maybe[A]] // YOLO
 }
 
 private trait MaybeEqual[A] extends Equal[Maybe[A]] {
@@ -133,9 +136,9 @@ private trait MaybeEqual[A] extends Equal[Maybe[A]] {
   override def equalIsNatural: Boolean = A.equalIsNatural
 
   override def equal(a1: Maybe[A], a2: Maybe[A]) = (a1,a2) match {
-    case (NotThere,NotThere) ⇒ true
-    case (_, NotThere) ⇒ false
-    case (NotThere, _) ⇒ false
+    case (NotThere(),NotThere()) ⇒ true
+    case (_, NotThere()) ⇒ false
+    case (NotThere(), _) ⇒ false
     case (There(x), There(y)) ⇒ A.equal(x,y)
   }
 }

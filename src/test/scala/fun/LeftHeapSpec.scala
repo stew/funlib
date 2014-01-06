@@ -22,7 +22,7 @@ object LeftHeapSpec extends Properties("LeftHeap") {
       case ((b, There(x)), i) ⇒ (b && order(x,i) != GT, There(i))
     }
 
-    val r = h.toStream.foldLeft[(Boolean, Maybe[A])](true, NotThere)(combine)
+    val r = h.toStream.foldLeft[(Boolean, Maybe[A])]((true, NotThere()))(combine)
     r._1
   }
 

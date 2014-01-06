@@ -24,12 +24,12 @@ sealed trait LeftHeap[A] {
   def insert(a: A)(implicit order: Order[A]): LeftHeap[A] = merge(this, single(a))
 
   def headMaybe: Maybe[A] = this match {
-    case LeftHeapNil() ⇒ NotThere
+    case LeftHeapNil() ⇒ NotThere()
     case LeftHeapNode(a, _, _, _) ⇒ There(a)
   }
 
   def uncons(implicit order: Order[A]): Maybe[(A, LeftHeap[A])] = this match {
-    case LeftHeapNil() ⇒ NotThere
+    case LeftHeapNil() ⇒ NotThere()
     case LeftHeapNode(a, _, l, r) ⇒ There((a, merge(l,r)))
   }
 
@@ -38,7 +38,7 @@ sealed trait LeftHeap[A] {
     case LeftHeapNode(_, _, l, r) ⇒ merge(l,r)
   }
 
-  def toStream(implicit order: Order[A]): Stream[A] = Maybe.unfold(this)(_.uncons)
+  def toStream(implicit order: Order[A]): Streem[A] = Streem.unfold(this)(_.uncons)
 }
 
 object LeftHeap {
@@ -104,5 +104,5 @@ private trait LeftHeapEqual[A] extends Equal[LeftHeap[A]] {
 
   override def equalIsNatural: Boolean = A.equalIsNatural
   
-  override def equal(a1: LeftHeap[A], a2: LeftHeap[A]) = Equal[Stream[A]].equal(a1.toStream, a2.toStream)
+  override def equal(a1: LeftHeap[A], a2: LeftHeap[A]) = Equal[Streem[A]].equal(a1.toStream, a2.toStream)
 }

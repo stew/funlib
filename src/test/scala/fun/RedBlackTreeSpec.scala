@@ -22,7 +22,7 @@ object RedBlackTreeSpec extends Properties("RedBlackTree") {
       case ((b, There(x)), i) ⇒ (b && order(x,i) != GT, There(i))
     }
 
-    val r = h.toList.foldl[(Boolean, Maybe[A])](combine, (true, NotThere))
+    val r = h.toList.foldl[(Boolean, Maybe[A])](combine, (true, NotThere()))
     r._1
   }
 
