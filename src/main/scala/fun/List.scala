@@ -22,6 +22,21 @@ sealed trait Lst[A] {
   def collect[B](pf: PartialFunction[A,B]): Lst[B] = foldr[Lst[B]](((a,b) ⇒ if(pf.isDefinedAt(a)) pf(a) :: b else b), End())
   def filter[B](f: A⇒Boolean): Lst[A] = foldr[Lst[A]](((a,b) ⇒ if(f(a)) a :: b else b), End())
 
+  def take(n: Int): Lst[A] = {
+    def take_(n: Int, from: Lst[A], res: Lst[A]): Lst[A] = (n, from) match {
+      case (0, _) ⇒ res.reverse
+      case (_, End()) ⇒ res.reverse
+      case (n, x Cons xs) ⇒ take_(n-1, xs, x :: res)
+    }
+    take_(n, this, End())
+  }
+
+  def drop(n: Int): Lst[A] = (n, this) match {
+    case (0, _) ⇒ this
+    case (_, End()) ⇒ this
+    case (n, x Cons xs) ⇒ xs take (n-1)
+  }
+
   def ++[B >: A](b: Lst[B]): Lst[B] = foldr(Cons.apply[B], b)
 
   def toList: List[A] = foldr[List[A]]((_ :: _), Nil)
