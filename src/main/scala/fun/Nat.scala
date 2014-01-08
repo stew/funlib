@@ -1,6 +1,5 @@
 package fun
 
-
 sealed trait Nat
 
 final case object Z extends Nat

@@ -26,8 +26,7 @@ object RedBlackTreeSpec extends Properties("RedBlackTree") {
     r._1
   }
 
-
-  property("ordered") = forAll { (as: Lst[String]) ⇒ 
+  property("ordered") = forAll { (as: List[String]) ⇒ 
     try {
       val h = as.foldl[RedBlackTree[String]]({(r, a) ⇒ r insert a}, RedBlackTree.empty[String])
       ordered(h)

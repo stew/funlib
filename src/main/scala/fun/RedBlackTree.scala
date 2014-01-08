@@ -19,7 +19,7 @@ trait RedBlackTree[A] {
 
   }
 
-  def toList(implicit order: Order[A]): Lst[A] = this match {
+  def toList(implicit order: Order[A]): List[A] = this match {
     case RedBlackNil() ⇒ End()
     case RedBlackNode(a, _, left, right) ⇒ left.toList ++ (a :: right.toList)
   }

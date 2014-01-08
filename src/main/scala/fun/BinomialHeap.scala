@@ -43,7 +43,7 @@ case class BinomialHeap[A](trees: Array[Maybe[BinomialTree[A]]], maxThere: Int) 
     }
   }
 
-  def toStream(implicit order: Order[A]): Streem[A] = Streem.unfold(this)(_.uncons)
+  def toStream(implicit order: Order[A]): Stream[A] = Stream.unfold(this)(_.uncons)
 }
 
 object BinomialHeap {

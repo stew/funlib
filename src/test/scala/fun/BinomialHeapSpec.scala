@@ -27,7 +27,7 @@ object BinomialHeapSpec extends Properties("BinomialHeap") {
   }
 
 
-  property("ordered") = forAll { (as: Lst[String]) ⇒ 
+  property("ordered") = forAll { (as: List[String]) ⇒ 
     try {
       val h = as.foldl[BinomialHeap[String]]({(r, a) ⇒ r insert a}, BinomialHeap.empty[String])
       ordered(h)

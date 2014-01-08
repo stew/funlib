@@ -1,5 +1,12 @@
 package fun
 
+/**
+  * an alternative to Option
+  * 
+  * The major changes from Option are that this is invariant as an
+  * experiment, and some of the non-total functions are elided, such
+  * as Option#get
+  */
 sealed trait Maybe[A] {
   def isDefined: Boolean
   def isEmpty: Boolean

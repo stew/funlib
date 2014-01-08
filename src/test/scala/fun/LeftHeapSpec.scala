@@ -27,7 +27,7 @@ object LeftHeapSpec extends Properties("LeftHeap") {
   }
 
 
-  property("ordered") = forAll { (as: Lst[String]) ⇒ 
+  property("ordered") = forAll { (as: List[String]) ⇒ 
     val h = as.foldl[LeftHeap[String]]({(r, a) ⇒ r insert a}, LeftHeap.empty[String])
     ordered(h)
   }

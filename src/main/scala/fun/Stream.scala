@@ -2,9 +2,9 @@ package fun
 
 import scalaz.Equal
 
-sealed trait Streem[A] {
+sealed trait Stream[A] {
   def headMaybe: Maybe[A]
-  def tail: Streem[A]
+  def tail: Stream[A]
 
   def foldLeft[B](b: B)(f: (B,A)⇒B): B = {
     headMaybe match {
@@ -14,59 +14,59 @@ sealed trait Streem[A] {
   }
 }
 
-abstract class StreemCons[A](head: A) extends Streem[A] {
+abstract class StreamCons[A](head: A) extends Stream[A] {
   def headMaybe = There(head)
 }
 
-object StreemCons {
-  def unapply[A](sa: Streem[A]) = sa.headMaybe.toOption
+object StreamCons {
+  def unapply[A](sa: Stream[A]) = sa.headMaybe.toOption
 }
 
-case object StreemNil extends Streem[Nothing] {
-  def apply[A]() = this.asInstanceOf[Streem[A]]
-  def unapply[A](s: Streem[A]): Boolean = (s.headMaybe == NotThere)
+case object StreamNil extends Stream[Nothing] {
+  def apply[A]() = this.asInstanceOf[Stream[A]]
+  def unapply[A](s: Stream[A]): Boolean = (s.headMaybe == NotThere)
 
   def tail = this // h8
 
   val headMaybe = NotThere
 }
 
-object Streem {
-  def apply[A](as: A*): Streem[A] = {
+object Stream {
+  def apply[A](as: A*): Stream[A] = {
     as.headOption match {
-      case None ⇒ StreemNil()
-      case Some(x) ⇒ new StreemCons(x) {
+      case None ⇒ StreamNil()
+      case Some(x) ⇒ new StreamCons(x) {
         def tail = apply(as.tail : _*)
       }
     }
   }
 
-  def cons[A](h: A, t: ⇒ Streem[A]): Streem[A] = new StreemCons(h) {
+  def cons[A](h: A, t: ⇒ Stream[A]): Stream[A] = new StreamCons(h) {
     def tail = t
   }
 
-  def empty[A]: Streem[A] = StreemNil()
+  def empty[A]: Stream[A] = StreamNil()
 
-  def unfold[A, B](seed: A)(f: A => Maybe[(B, A)]): Streem[B] =
+  def unfold[A, B](seed: A)(f: A => Maybe[(B, A)]): Stream[B] =
     f(seed) match {
-      case NotThere() ⇒ Streem.empty
-      case There((b, a)) ⇒ Streem.cons(b, unfold(a)(f))
+      case NotThere() ⇒ Stream.empty
+      case There((b, a)) ⇒ Stream.cons(b, unfold(a)(f))
     }
 
-  implicit def streemEqual[A](implicit A0: Equal[A]): Equal[Streem[A]] = new StreemEqual[A] {
+  implicit def streemEqual[A](implicit A0: Equal[A]): Equal[Stream[A]] = new StreamEqual[A] {
     implicit def A = A0
   }
 
 }
 
-private trait StreemEqual[A] extends Equal[Streem[A]] {
+private trait StreamEqual[A] extends Equal[Stream[A]] {
   implicit def A: Equal[A]
 
   override def equalIsNatural: Boolean = A.equalIsNatural
 
-  override def equal(a1: Streem[A], a2: Streem[A]) = (a1,a2) match {
-    case (StreemNil(),StreemNil()) ⇒ true
-    case (StreemCons(x), StreemCons(y)) ⇒ A.equal(x,y) && equal(a1.tail, a2.tail)
+  override def equal(a1: Stream[A], a2: Stream[A]) = (a1,a2) match {
+    case (StreamNil(),StreamNil()) ⇒ true
+    case (StreamCons(x), StreamCons(y)) ⇒ A.equal(x,y) && equal(a1.tail, a2.tail)
     case (_, _) ⇒ false
   }
 
