@@ -2,6 +2,7 @@ package fun
 
 trait Vect[A, L <: Nat] {
   vect ⇒
+  import Vect._
 
   def isEmpty: Boolean
   def nonEmpty: Boolean
@@ -20,21 +21,24 @@ trait Vect[A, L <: Nat] {
   // note, this is not yet working, not sure why
   def drop[N <: Nat](implicit dropEv: Drop[N]) = dropEv.apply
 
-}
-
-object Vect {
-
   /**
     * Provide evidence that we can Always drop zero items from a Vect
     */
   // note, this is not yet working, not sure why
-  implicit def drop0[A,L <: Nat](vect: Vect[A,L])(implicit diff: Diff[L,Z.type]) = new vect.Drop[Z.type]()(diff) {
+  implicit def drop0(implicit diff: Diff[L,Z.type]): Drop[Z.type] = new Drop[Z.type]()(diff) {
     def apply = vect.asInstanceOf[Vect[A, this.diff.Out]]
   }
 
 }
 
+object Vect {
+
+
+}
+
 case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]] {
+  import Vect._
+
   def isEmpty = false
   def nonEmpty = true
 
