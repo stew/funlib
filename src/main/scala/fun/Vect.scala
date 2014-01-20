@@ -1,56 +1,53 @@
 package fun
 
 trait Vect[A, L <: Nat] {
-  vect ⇒
-  import Vect._
-
   def isEmpty: Boolean
   def nonEmpty: Boolean
   def headMaybe: Maybe[A]
-
-  /**
-    * Drop N items from a Vect, leaving M items
-    */
-  abstract class Drop[N <: Nat](implicit val diff: Diff[L,N]) {
-    def apply: Vect[A,diff.Out]
-  }
-
   /**
     * drop N items from a vector, leaving M Items
     */
   // note, this is not yet working, not sure why
-  def drop[N <: Nat](implicit dropEv: Drop[N]) = dropEv.apply
+  import Drop._
+  def drop[N <: Nat](implicit dropEv: this.type ⇒ Drop[A,L,N], diff: Diff[L,N]) = dropEv(this).apply
 
+  def tail(implicit pred: Pred[L]): Vect[A,pred.Out] = this.asInstanceOf[VCons[A,pred.Out]].tail
+
+}
+
+
+/**
+  * Drop N items from a Vect, leaving M items
+  */
+abstract class Drop[A, L <: Nat, N <: Nat](implicit val diff: Diff[L,N]) {
+  def apply: Vect[A,diff.Out]
+}
+
+object Drop {
   /**
     * Provide evidence that we can Always drop zero items from a Vect
     */
   // note, this is not yet working, not sure why
-  implicit def drop0(implicit diff: Diff[L,Z.type]): Drop[Z.type] = new Drop[Z.type]()(diff) {
-    def apply = vect.asInstanceOf[Vect[A, this.diff.Out]]
+  implicit def drop0[A, L <: Nat](implicit diff: Diff[L,Z.type]): Vect[A,L] ⇒ Drop[A, L, Z.type] = { vect ⇒ 
+    new Drop[A,L,Z.type]()(diff) {
+      def apply = vect.asInstanceOf[Vect[A, this.diff.Out]]
+    }
   }
-
-}
-
-object Vect {
-
-
+  implicit def dropN[A, L <: Nat, N <: Nat](implicit dropEv: Vect[A,L] ⇒ Drop[A,L,N], diff: Diff[L,N]): Vect[A, Succ[L]] ⇒ Drop[A, Succ[L], Succ[N]] = { vect ⇒
+    implicit val pdiff: DiffAux[L,N,diff.Out] = new DiffAux[L,N,diff.Out] {}
+    new Drop[A, Succ[L], Succ[N]]() {
+      def apply = dropEv(vect.tail).apply.asInstanceOf[Vect[A,this.diff.Out]]
+    }
+  }
 }
 
 case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]] {
-  import Vect._
 
   def isEmpty = false
   def nonEmpty = true
 
   def headMaybe = There(head)
 
-  // note, this is not yet working, not sure why
-  implicit def dropN[N <: Nat](implicit dropEv: tail.Drop[N], diff: Diff[L,N]): Drop[Succ[N]] = {
-    implicit val diffaux: DiffAux[L,N,diff.Out] = new DiffAux[L,N,diff.Out] {} 
-    new Drop[Succ[N]]() {
-      def apply = dropEv.apply.asInstanceOf[Vect[A,this.diff.Out]]
-    }
-  }
 }
 
 
