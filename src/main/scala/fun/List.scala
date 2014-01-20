@@ -2,7 +2,7 @@ package fun
 
 import scala.{List ⇒ SList}
 import annotation.tailrec
-import scalaz.{MonadPlus,Monoid,Show,Cord,Equal,Cobind}
+import scalaz.{Applicative,MonadPlus,Monoid,Show,Cord,Equal,Cobind,Traverse}
 
 /**
   * A linked list. similar to the scala standard List (scala.collection.immutable.List)
@@ -46,7 +46,7 @@ sealed trait List[A] {
     * instead as None because of the first parameter list, this
     * version will not have this problem.
     */
-  def foldr[B](f: (A,B)⇒B, b: B): B = this.reverse.foldl(((x: B,y: A) ⇒ f(y,x)), b)
+  def foldr[B](f: (A,⇒ B) ⇒B, b: ⇒ B): B = this.reverse.foldl(((x: B,y: A) ⇒ f(y,x)), b)
   // TODO should foldr be moved to just be in Foldable?
 
   final def reverse: List[A] = foldl[List[A]](((a,b) ⇒ b :: a), End())
@@ -73,7 +73,7 @@ sealed trait List[A] {
   /**
     * append a list to the tail of this list, this is a O(n) operation
     */
-  def ++[B >: A](b: List[B]): List[B] = foldr(Cons.apply[B], b)
+  def ++[B >: A](b: List[B]): List[B] = foldr[List[B]]((_ :: _), b)
 
   /**
     * convert this list to a standard library List
@@ -114,7 +114,7 @@ object List {
     implicit def A = A0
   }
 
-  implicit val listInstances: MonadPlus[List] = new MonadPlus[List] with Cobind[List]{
+  implicit val listInstances: MonadPlus[List] with Cobind[List] with Traverse[List] = new MonadPlus[List] with Cobind[List] with Traverse[List] {
     override def empty[A] = End()
     override def point[A](a: ⇒ A) = Cons(a, End())
     override def plus[A](a: List[A], b: ⇒ List[A]) = a ++ b
@@ -126,6 +126,13 @@ object List {
         case End => End()
         case _ Cons t => f(fa) :: cobind(t)(f)
       }
+
+    override def foldRight[A,B](fa: List[A], z: ⇒ B)(f: (A, ⇒ B) ⇒ B) = fa.foldr(f, z)
+    override def foldLeft[A,B](fa: List[A], z: B)(f: (B, A) ⇒ B) = fa.foldl(f, z)
+
+    def traverseImpl[F[_], A, B](l: List[A])(f: A => F[B])(implicit F: Applicative[F]): F[List[B]] = {
+      l.foldr[F[List[B]]]((a,fbs) ⇒ F.apply2(f(a), fbs)(_ :: _), F.point(empty))
+    }
   }
 
   implicit def listMonoid[A]: Monoid[List[A]] = new Monoid[List[A]] {

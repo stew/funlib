@@ -40,8 +40,9 @@ class ListLawsSpec extends Spec {
   import fun.List._
   import scalaz.Equal
   import scalaz.std.anyVal._
+  import scalaz.{ApplicativePlus,Traverse}
 
   checkAll(monoid.laws[List[Int]])
   checkAll(monadPlus.laws[List])
-//  checkAll(cobind.laws[List])
-  }
+  checkAll(traverse.laws[List])
+}
