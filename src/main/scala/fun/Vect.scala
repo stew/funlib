@@ -141,6 +141,9 @@ object Drop {
   }
 }
 
+/**
+  * A cons cell for a non empty Vect which has a tail of length L
+  */
 case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]] {
 
   def isEmpty = false
@@ -151,6 +154,9 @@ case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]]
 }
 
 
+/**
+  * the end of all Vects
+  */
 case object VEnd extends Vect[Nothing, Z.type] {
   def isEmpty = true
   def nonEmpty = false
