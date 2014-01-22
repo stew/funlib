@@ -2,10 +2,11 @@ package fun
 
 sealed trait Nat
 
-final case object Z extends Nat
 final case class Succ[N <: Nat](p: Nat) extends Nat
-trait Plus[A <: Nat, B <: Nat] {
-  type Out <: Nat
+
+object Nat {
+  class _0 extends Nat
+  implicit val _0 = new _0
 }
 
 trait Diff[A <: Nat, B <: Nat] {
@@ -21,7 +22,9 @@ object Diff {
 }
 
 object DiffAux {
-  implicit def diffAux0[A <: Nat] = new DiffAux[A, Z.type, A] {}
+  import Nat._0
+
+  implicit def diffAux0[A <: Nat] = new DiffAux[A, _0, A] {}
   implicit def diffAuxN[A <: Nat, B <: Nat, C <: Nat](implicit ev: DiffAux[A,B,C]) = 
     new DiffAux[Succ[A], Succ[B], C] {}
 

@@ -1,4 +1,5 @@
 package fun
+import Nat._0
 
 /**
   * Exploration of implementing a compiler verified linked list
@@ -61,8 +62,8 @@ object Take {
   /**
     * Provide evidence that we can always drop zero items from a Vect
     */
-  implicit def take0[A,L <: Nat]: Vect[A,L] ⇒ Take[A, Z.type] = { _ ⇒ 
-    new Take[A, Z.type] {
+  implicit def take0[A,L <: Nat]: Vect[A,L] ⇒ Take[A, _0] = { _ ⇒ 
+    new Take[A, _0] {
       def apply = VEnd[A]() 
     }
   }
@@ -91,9 +92,9 @@ object SplitAt {
   /**
     * Provide evidence that any Vect can be split at Zero
     */
-  implicit def splitAt0[A, L <: Nat](implicit diff: Diff[L,Z.type]): Vect[A,L] ⇒ SplitAt[A, L, Z.type] = { vect ⇒
-    new SplitAt[A, L, Z.type]()(diff) {
-      def apply: (Vect[A,Z.type], Vect[A,diff.Out]) = (VEnd(), vect.asInstanceOf[Vect[A, diff.Out]])
+  implicit def splitAt0[A, L <: Nat](implicit diff: Diff[L,_0]): Vect[A,L] ⇒ SplitAt[A, L, _0] = { vect ⇒
+    new SplitAt[A, L, _0]()(diff) {
+      def apply: (Vect[A,_0], Vect[A,diff.Out]) = (VEnd(), vect.asInstanceOf[Vect[A, diff.Out]])
     }
   }
 
@@ -114,9 +115,9 @@ object SplitAt {
 }
 
 /**
-  * Drop N items from a Vect
+  * Drop N items from a Vect of length L
   */
-abstract class Drop[A, L <: Nat, N <: Nat](implicit val diff: Diff[L,N]) {
+abstract class Drop[A, L <: Nat, N <: Nat, M<: Nat](implicit val diff: Diff[L,N]) {
   def apply: Vect[A,diff.Out]
 }
 
@@ -124,8 +125,8 @@ object Drop {
   /**
     * Provide evidence that we can Always drop zero items from a Vect
     */
-  implicit def drop0[A, L <: Nat](implicit diff: Diff[L,Z.type]): Vect[A,L] ⇒ Drop[A, L, Z.type] = { vect ⇒ 
-    new Drop[A,L,Z.type]()(diff) {
+  implicit def drop0[A, L <: Nat](implicit diff: Diff[L,_0]): Vect[A,L] ⇒ Drop[A, L, _0] = { vect ⇒ 
+    new Drop[A,L,_0]()(diff) {
       def apply = vect.asInstanceOf[Vect[A, this.diff.Out]]
     }
   }
@@ -153,16 +154,15 @@ case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]]
 
 }
 
-
 /**
   * the end of all Vects
   */
-case object VEnd extends Vect[Nothing, Z.type] {
+case object VEnd extends Vect[Nothing, _0] {
   def isEmpty = true
   def nonEmpty = false
 
   val headMaybe = NotThere
 
   def unapply[A,N <: Nat](l: Vect[A,N]) = l.isEmpty
-  def apply[A]() = this.asInstanceOf[Vect[A,Z.type]]
+  def apply[A]() = this.asInstanceOf[Vect[A,_0]]
 }
