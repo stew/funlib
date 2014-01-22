@@ -13,24 +13,28 @@ import Nat._0
 // TODO get rid of the YOLO .asInstanceOf all over the place, probably by adding Leibniz.===
 trait Vect[A, L <: Nat] {
   def isEmpty: Boolean
-  def nonEmpty: Boolean
   def headMaybe: Maybe[A]
+
+  /**
+    * prove that this list is non-empty, and I'll give you a cookie
+    */
+  def nonEmpty(implicit pred: Pred[L]): VCons[A, pred.Out] = asInstanceOf
 
   /**
     *  If we have proof that L is not Zero, we can safely return the tail of the Vect
     */
-  def tail(implicit pred: Pred[L]): Vect[A,pred.Out] = this.asInstanceOf[VCons[A,pred.Out]].tail // demi-YOLO?
+  def tail(implicit pred: Pred[L]): Vect[A,pred.Out] = nonEmpty.tail
 
   /**
     *  If we have proof that L is not Zero, we can safely return the head of the Vect
     */
-  def head(implicit pred: Pred[L]): A = this.asInstanceOf[VCons[A,pred.Out]].head 
+  def head(implicit pred: Pred[L]): A = nonEmpty.head
 
   /**
     * Prepend an element to the front of this Vect
     */
   def ::(head: A): VCons[A, L] = VCons(head, this)
-
+  
   /**
     * drop N items from a Vect, leaving M Items. If we cannot find
     * proof that there are at least N elements in this Vect, the call
@@ -43,7 +47,7 @@ trait Vect[A, L <: Nat] {
     * be verified that there are at least N elements in this Vect,
     * this should fail to compile
     */
-  def take[N <: Nat](implicit takeEv: this.type ⇒ Take[A, N], diff: Diff[L,N]): Vect[A,N] = takeEv(this).apply
+  def take[N <: Nat](implicit takeEv: this.type ⇒ Take[A, N]): Vect[A,N] = takeEv(this).apply
 
   /**
     * split a Vect at position N, returning two Vects. This should be the same as (take[N],drop[N])
@@ -99,8 +103,6 @@ object SplitAt {
 }
 
 object SplitAtAux {
-  // TODO: we should be able to get rid of the implicit diff here, but
-  // we might need to add a Leibniz.=== to do it
   /**
     * Provide evidence that any Vect can be split at Zero
     */
@@ -165,7 +167,6 @@ object DropAux {
 case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]] {
 
   def isEmpty = false
-  def nonEmpty = true
 
   def headMaybe = There(head)
 
@@ -176,7 +177,6 @@ case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]]
   */
 case object VEnd extends Vect[Nothing, _0] {
   def isEmpty = true
-  def nonEmpty = false
 
   val headMaybe = NotThere
 
