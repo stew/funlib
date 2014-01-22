@@ -36,7 +36,7 @@ trait Vect[A, L <: Nat] {
     * proof that there are at least N elements in this Vect, the call
     * should fail to compile.
     */
-  def drop[N <: Nat](implicit dropEv: this.type ⇒ Drop[A,L,N], diff: Diff[L,N]): Vect[A,diff.Out] = dropEv(this).apply.asInstanceOf[Vect[A,diff.Out]]
+  def drop[N <: Nat](dropEv: Drop[A,L,N]): Vect[A,dropEv.Out] = dropEv(this)
 
   /**
     * Make a Vect using the first N terms of this Vect. If it cannot
@@ -48,7 +48,7 @@ trait Vect[A, L <: Nat] {
   /**
     * split a Vect at position N, returning two Vects. This should be the same as (take[N],drop[N])
     */
-  def splitAt[N <: Nat](implicit splitAtEv: this.type ⇒ SplitAt[A,L,N], diff: Diff[L,N]): (Vect[A,N], Vect[A,diff.Out]) = splitAtEv(this).apply.asInstanceOf[(Vect[A,N], Vect[A, diff.Out])]
+  def splitAt[N <: Nat](implicit splitAtEv: SplitAt[A,L,N]): (Vect[A,N], Vect[A,splitAtEv.Out]) = splitAtEv(this)
 }
 
 /**
@@ -82,20 +82,30 @@ object Take {
 /**
   Split a Vect into two lists at the Nth element of the Vect
   */
-abstract class SplitAt[A, L <: Nat, N <: Nat](implicit val diff: Diff[L,N]) {
-  def apply: (Vect[A,N], Vect[A,diff.Out])
+abstract class SplitAt[A, L <: Nat, N <: Nat] {
+  type Out <: Nat
+  def apply(in: Vect[A, L]): (Vect[A,N], Vect[A,Out])
+}
+
+abstract class SplitAtAux[A, L <: Nat, N <: Nat, M <: Nat] {
+  def apply(in: Vect[A, L]): (Vect[A,N], Vect[A,M])
 }
 
 object SplitAt {
+  implicit def fromAux[A, L <: Nat, N <: Nat, M <: Nat](implicit aux: SplitAtAux[A, L, N, M]): SplitAt[A, L, N] = new SplitAt[A, L, N] {
+    type Out = M
+    def apply(in: Vect[A, L]): (Vect[A,N], Vect[A,Out]) = aux(in)
+  }
+}
+
+object SplitAtAux {
   // TODO: we should be able to get rid of the implicit diff here, but
   // we might need to add a Leibniz.=== to do it
   /**
     * Provide evidence that any Vect can be split at Zero
     */
-  implicit def splitAt0[A, L <: Nat](implicit diff: Diff[L,_0]): Vect[A,L] ⇒ SplitAt[A, L, _0] = { vect ⇒
-    new SplitAt[A, L, _0]()(diff) {
-      def apply: (Vect[A,_0], Vect[A,diff.Out]) = (VEnd(), vect.asInstanceOf[Vect[A, diff.Out]])
-    }
+  implicit def splitAt0[A, L <: Nat]: SplitAtAux[A, L, _0, L] = new SplitAtAux[A, L, _0, L] {
+    override def apply(in: Vect[A, L]) = (VEnd(), in)
   }
 
   /**
@@ -103,41 +113,48 @@ object SplitAt {
     * can also split a Vect with an additional element Consed on the
     * front at Succ[N]
     */
-  implicit def splitAtN[A, L <: Nat, N <: Nat](implicit diff: Diff[L,N], splitAtEv: Vect[A,L] ⇒ SplitAt[A,L,N]): Vect[A, Succ[L]] ⇒ SplitAt[A, Succ[L], Succ[N]] = { vect ⇒
-    implicit val pdiff: DiffAux[L,N,diff.Out] = new DiffAux[L,N,diff.Out] {}
-    new SplitAt[A, Succ[L], Succ[N]] { 
-      def apply = {
-        val prev = splitAtEv(vect.tail).apply
-        (vect.head :: prev._1, prev._2.asInstanceOf[Vect[A, diff.Out]])
+  implicit def splitAtN[A, L <: Nat, N <: Nat, M <: Nat](implicit splitAtEv: SplitAtAux[A,L,N,M]): SplitAtAux[A, Succ[L], Succ[N], M] = 
+    new SplitAtAux[A, Succ[L], Succ[N], M] { 
+      override def apply(in: Vect[A, Succ[L]]) = {
+        val prev = splitAtEv(in.tail)
+        (in.head :: prev._1, prev._2)
       }
     }
-  }
 }
 
 /**
-  * Drop N items from a Vect of length L
+  * Drop N items from a Vect leaving M items
   */
-abstract class Drop[A, L <: Nat, N <: Nat, M<: Nat](implicit val diff: Diff[L,N]) {
-  def apply: Vect[A,diff.Out]
+trait Drop[A, L <: Nat, N <: Nat] {
+  type Out <: Nat
+  def apply(in: Vect[A, L]): Vect[A,Out]
+}
+
+trait DropAux[A, L <: Nat, N <: Nat, M <: Nat] { 
+  def apply(in: Vect[A, L]): Vect[A,M]
 }
 
 object Drop {
+  implicit def dropaux[A, L <: Nat, N <: Nat, M <: Nat](implicit aux: DropAux[A,L,N,M]): Drop[A,L,N] = new Drop[A,L,N] {
+    type Out = M
+    def apply(in: Vect[A, L]): Vect[A,Out] = aux.apply(in)
+  }
+}
+
+object DropAux {
   /**
     * Provide evidence that we can Always drop zero items from a Vect
     */
-  implicit def drop0[A, L <: Nat](implicit diff: Diff[L,_0]): Vect[A,L] ⇒ Drop[A, L, _0] = { vect ⇒ 
-    new Drop[A,L,_0]()(diff) {
-      def apply = vect.asInstanceOf[Vect[A, this.diff.Out]]
-    }
+  implicit def drop0[A, L <: Nat]: DropAux[A, L, _0, L] = new DropAux[A, L, _0, L] {
+    def apply(in: Vect[A, L]) = in
   }
 
   /**
     * Provide evidence that if we can drop L items from the tail, we can drop Succ[L] items from a Vect
     */
-  implicit def dropN[A, L <: Nat, N <: Nat](implicit dropEv: Vect[A,L] ⇒ Drop[A,L,N], diff: Diff[L,N]): Vect[A, Succ[L]] ⇒ Drop[A, Succ[L], Succ[N]] = { vect ⇒
-    implicit val pdiff: DiffAux[L,N,diff.Out] = new DiffAux[L,N,diff.Out] {}
-    new Drop[A, Succ[L], Succ[N]]() {
-      def apply = dropEv(vect.tail).apply.asInstanceOf[Vect[A,this.diff.Out]]
+  implicit def dropN[A, L <: Nat, N <: Nat, M <: Nat](dropEv: DropAux[A,L,N,M]): Vect[A, Succ[L]] ⇒ DropAux[A, Succ[L], Succ[N], M] = { vect ⇒
+    new DropAux[A, Succ[L], Succ[N], M] {
+      def apply(in: Vect[A, Succ[L]]) = dropEv(vect.tail)
     }
   }
 }
