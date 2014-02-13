@@ -1,5 +1,5 @@
 package fun
-import Nat._0
+import Nat._
 
 /**
   * Exploration of implementing a compiler verified linked list
@@ -10,25 +10,24 @@ import Nat._0
   * verify that there are provably enough elements in the Vect to
   * perform the operation.
   */
-// TODO get rid of the YOLO .asInstanceOf all over the place, probably by adding Leibniz.===
 trait Vect[A, L <: Nat] {
   def isEmpty: Boolean
   def headMaybe: Maybe[A]
-
   /**
     * prove that this list is non-empty, and I'll give you a cookie
     */
-  def nonEmpty(implicit pred: Pred[L]): VCons[A, pred.Out] = asInstanceOf
+  def nonEmpty(implicit pred: Pred[L]): VCons[A, pred.Out] = this.asInstanceOf[VCons[A,pred.Out]]
+
 
   /**
     *  If we have proof that L is not Zero, we can safely return the tail of the Vect
     */
-  def tail(implicit pred: Pred[L]): Vect[A,pred.Out] = nonEmpty.tail
+  def tail(implicit pred: Pred[L]): Vect[A,pred.Out] = this.asInstanceOf[VCons[A,pred.Out]].tail // demi-YOLO?
 
   /**
     *  If we have proof that L is not Zero, we can safely return the head of the Vect
     */
-  def head(implicit pred: Pred[L]): A = nonEmpty.head
+  def head(implicit pred: Pred[L]): A = this.asInstanceOf[VCons[A,pred.Out]].head 
 
   /**
     * Prepend an element to the front of this Vect
@@ -164,12 +163,9 @@ object DropAux {
 /**
   * A cons cell for a non empty Vect which has a tail of length L
   */
-case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]] {
-
+final case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A, Succ[L]] {
   def isEmpty = false
-
   def headMaybe = There(head)
-
 }
 
 /**
@@ -177,7 +173,6 @@ case class VCons[A, L <: Nat](head: A, tail: Vect[A, L]) extends Vect[A,Succ[L]]
   */
 case object VEnd extends Vect[Nothing, _0] {
   def isEmpty = true
-
   val headMaybe = NotThere
 
   def unapply[A,N <: Nat](l: Vect[A,N]) = l.isEmpty
