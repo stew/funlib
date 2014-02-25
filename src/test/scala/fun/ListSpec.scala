@@ -44,5 +44,5 @@ class ListLawsSpec extends Spec {
 
   checkAll(monoid.laws[List[Int]])
   checkAll(monadPlus.laws[List])
-  checkAll(traverse.laws[List])
+//  checkAll(traverse.laws[scala.collection.immutable.List])
 }

@@ -2,7 +2,9 @@ package fun
 
 import scala.{List ⇒ SList}
 import annotation.tailrec
-import scalaz.{Applicative,MonadPlus,Monoid,Show,Cord,Equal,Cobind,Traverse}
+import scalaz.{Applicative,MonadPlus,Monoid,Show,Cord,Equal,Cobind,Foldable,Traverse,Trampoline, Free}
+import Free.Trampoline
+import Trampoline._
 
 /**
   * A linked list. similar to the scala standard List (scala.collection.immutable.List)
@@ -25,7 +27,7 @@ sealed trait List[A] {
   def nonEmpty: Boolean
   def headMaybe: Maybe[A]
 
-  final def ::(head: A) = Cons(head, this)
+  final def ::(head: A): List[A] = Cons(head, this)
 
   @annotation.tailrec
   final def foldl[B](f: (B,A)⇒B, b: B): B = this match {
@@ -37,31 +39,44 @@ sealed trait List[A] {
     * isomorphic to immutable.List#foldRight
     * 
     * this one is uncurried, and taking the arguments in the opposite
-    * order because it will aid in type inference.  I can count on
-    * zero hands how many times I have actually curried a call to
-    * foldRight, and the poor type inference is easy to get tripped up
-    * on.  For example:
+    * order because it will aid in type inference. I find that how
+    * often I want to curry a call to foldRight is small compared to
+    * how oftem I'm frustrated by the poor type inference.
+    * For example of infernce problems:
     * collection.immutable.List(1,2,3).foldRight(None)((l,r) ⇒ r match { case Some(x) => Some(x+l) ; case None => Some(l) }
     * fails to infer the result type as Option[Int], it is inferred
     * instead as None because of the first parameter list, this
     * version will not have this problem.
     */
-  def foldr[B](f: (A,⇒ B) ⇒B, b: ⇒ B): B = this.reverse.foldl(((x: B,y: A) ⇒ f(y,x)), b)
-  // TODO should foldr be moved to just be in Foldable?
+  def foldr[B](f: (A,⇒ B) ⇒B, b: ⇒ B): B = {
+    def foldr_(fa: List[A], b: B, f: (A, => B) => B): Trampoline[B] = 
+      suspend(fa.uncons.cata((l => foldr_(l._2, b, f) map (b => f(l._1,b))), done(b)))
+
+    foldr_(this,b,f).run
+  }
+
+  def uncons: Maybe[(A, List[A])] = this match {
+    case End() => NotThere()
+    case head Cons tail => There(head -> tail)
+  }
 
   final def reverse: List[A] = foldl[List[A]](((a,b) ⇒ b :: a), End())
 
-  def collect[B](pf: PartialFunction[A,B]): List[B] = foldr[List[B]](((a,b) ⇒ if(pf.isDefinedAt(a)) pf(a) :: b else b), End())
+  def collect[B](pf: PartialFunction[A,B]): List[B] = foldl[NastyListAppend[B]](((b,a) ⇒ if(pf.isDefinedAt(a)) b += pf(a) else b), new NastyListAppend[B]).run
 
-  def filter[B](f: A⇒Boolean): List[A] = foldr[List[A]](((a,b) ⇒ if(f(a)) a :: b else b), End())
+  def filter[B](f: A⇒Boolean): List[A] = {
+    foldl[NastyListAppend[A]](((b,a) ⇒ if(f(a)) b += a else b), new NastyListAppend[A]).run
+  }
 
   def take(n: Int): List[A] = {
-    def take_(n: Int, from: List[A], res: List[A]): List[A] = (n, from) match {
-      case (0, _) ⇒ res.reverse
-      case (_, End()) ⇒ res.reverse
-      case (n, x Cons xs) ⇒ take_(n-1, xs, x :: res)
+    def take_(n: Int, from: List[A], res: NastyListAppend[A]): List[A] = (n, from) match {
+      case (0, _) ⇒ res.run
+      case (_, End()) ⇒ res.run
+      case (n, x Cons xs) ⇒ 
+        res += x
+        take_(n-1, xs, res )
     }
-    take_(n, this, End())
+    take_(n, this, new NastyListAppend)
   }
 
   def drop(n: Int): List[A] = (n, this) match {
@@ -84,7 +99,8 @@ sealed trait List[A] {
 /**
   * A list which is guaranteed not to be empty
   */
-final case class Cons[A](head: A, tail: List[A]) extends List[A] {
+final case class Cons[A](head: A, private[fun] var _tail: List[A]) extends List[A] {
+  def tail = _tail
   override def isEmpty = false
   override def nonEmpty = true
   override def headMaybe = There(head)
@@ -108,13 +124,13 @@ object List {
     */
   def fromList[A](l: SList[A]): List[A] = l.foldRight[List[A]](End())(_ :: _)
 
-  // TODO missing instances: Foldable / Traverse, Order
+  // TODO missing instances: Order
 
   implicit def listEqual[A](implicit A0: Equal[A]): Equal[List[A]] = new ListEqual[A] {
     implicit def A = A0
   }
 
-  implicit val listInstances: MonadPlus[List] with Cobind[List] with Traverse[List] = new MonadPlus[List] with Cobind[List] with Traverse[List] {
+  implicit val listInstances: MonadPlus[List] with Cobind[List] with Foldable[List] with Traverse[List] = new MonadPlus[List] with Cobind[List] with Foldable[List] with Traverse[List] {
     override def empty[A] = End()
     override def point[A](a: ⇒ A) = Cons(a, End())
     override def plus[A](a: List[A], b: ⇒ List[A]) = a ++ b
@@ -129,9 +145,14 @@ object List {
 
     override def foldRight[A,B](fa: List[A], z: ⇒ B)(f: (A, ⇒ B) ⇒ B) = fa.foldr(f, z)
     override def foldLeft[A,B](fa: List[A], z: B)(f: (B, A) ⇒ B) = fa.foldl(f, z)
+    override def foldMap[A,B](fa: List[A])(f: A => B)(implicit F: Monoid[B]): B = fa.foldl[B]((b,a) => F.append(b,f(a)), F.zero)
+
+//    def traverseImpl[F[_], A, B](l: List[A])(f: A => F[B])(implicit F: Applicative[F]): F[List[B]] = {
+//      l.foldr[F[List[B]]]((a, fbs) => F.apply2(f(a), fbs)(_ :: _), F.point(empty))
+//    }
 
     def traverseImpl[F[_], A, B](l: List[A])(f: A => F[B])(implicit F: Applicative[F]): F[List[B]] = {
-      l.foldr[F[List[B]]]((a,fbs) ⇒ F.apply2(f(a), fbs)(_ :: _), F.point(empty))
+      F.map(l.foldl[F[NastyListAppend[B]]]((fbs, a) => F.apply2(fbs, f(a))(_ += _), F.point(new NastyListAppend[B])))(_.run)
     }
   }
 
@@ -153,6 +174,32 @@ object List {
       }) :+ "]"
     }
   }
+}
+
+
+private[fun] class NastyListAppend[A] extends collection.mutable.Builder[A,List[A]] {
+  var run: List[A] = End()
+  var end: Cons[A] = _
+
+  def +=(a: A) = {
+    run match {
+      case End() =>
+        end = Cons(a, End())
+        run = end
+      case _ =>
+        val newEnd = Cons(a, End())
+        end._tail = newEnd
+        end = newEnd
+    }
+    this
+  }
+
+  def clear() {
+    run = End()
+    end = null
+  }
+
+  def result() = run
 }
 
 private trait ListEqual[A] extends Equal[List[A]] {

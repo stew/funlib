@@ -2,12 +2,14 @@ package fun
 
 import scala.{List⇒SList}
 import org.scalacheck.Arbitrary
+import org.scalacheck.util.Buildable
 import Arbitrary._
 
 package object test {
 
-  implicit def arbitraryList[A: Arbitrary]: Arbitrary[List[A]] = Arbitrary {
-    arbitrary[SList[A]] map List.fromList
+
+  implicit def listBuildable[A] = new Buildable[A,List] {
+    def builder = new NastyListAppend[A]
   }
 
   import scalaz.Order
