@@ -28,7 +28,6 @@ target
 *.sublime-*
 .cache
 .lib
-data
 .tags
 .tags_sorted_by_file
 .projectile

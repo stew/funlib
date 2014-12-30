@@ -1,0 +1,1 @@
+name := "funlib-std"
