@@ -2,7 +2,6 @@ package fun
 
 import scala.{List ⇒ SList}
 import annotation.tailrec
-import Free._
 
 /**
   * A linked list. similar to the scala standard List (scala.collection.immutable.List)
@@ -51,10 +50,10 @@ sealed trait List[A] {
     */
   def foldr[B](f: (A,⇒ B) ⇒B, b: ⇒ B): B = {
     def foldr_(fa: List[A], b: B, f: (A, => B) => B): Trampoline[B] = 
-      Suspend[Function0,B](() => fa.uncons.cata((l => foldr_(l._2, b, f) map (b => f(l._1,b))),
-                                   Pure(b)))
+      Suspend(() => fa.uncons.cata((l => foldr_(l._2, b, f) map (b => f(l._1,b))),
+                                   Return(b)))
 
-    foldr_(this,b,f).run(function0Interp)
+    foldr_(this,b,f).run
   }
 
   def uncons: Maybe[(A, List[A])] = this match {

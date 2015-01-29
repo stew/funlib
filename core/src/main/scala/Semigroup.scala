@@ -1,7 +1,7 @@
 package fun
 
 trait Semigroup[A] {
-  def zero: A
+  def append(left: A, right: => A): A
 }
 
 object Semigroup {

@@ -2,6 +2,7 @@ package fun
 
 trait Applicative[F[_]] extends Functor[F] {
   def point[A](a: => A): F[A]
+
   def ap[A,B](fa: F[A])(ff: F[A => B]): F[B]
 
   def map2[A,B,C](fa: F[A], fb: F[B])(f: (A,B) => C): F[C] =

@@ -58,22 +58,22 @@ sealed trait Maybe[A] {
     case NotThere() ⇒ None
   }
 
-  final def toRight[AA >: A, E](fa: Maybe[AA])(e: ⇒ E): Sum[E,AA] @@ WinLose = fa match {
+  final def toRight[AA >: A, E](fa: Maybe[AA])(e: ⇒ E): E \/ AA = fa match {
     case There(a) ⇒ Win(a)
     case NotThere ⇒ Lose(e)
   }
 
-  final def toLeft[AA >: A, B](fa: Maybe[AA])(b: ⇒ B): Sum[AA,B] @@ WinLose = fa match {
+  final def toLeft[AA >: A, B](fa: Maybe[AA])(b: ⇒ B): AA \/ B = fa match {
     case There(a) ⇒ Lose(a)
     case NotThere ⇒ Win(b)
   }
 
-  final def toValid[A,E](fa: Maybe[A])(e: ⇒ E): Sum[E,A] @@ Validation = fa match {
+  final def toValid[A,E](fa: Maybe[A])(e: ⇒ E): E V A = fa match {
     case There(a) ⇒ Valid(a)
     case NotThere ⇒ Invalid(e)
   }
 
-  final def toInvalid[A,B](fa: Maybe[A])(b: ⇒ B): Sum[A,B] @@ Validation = fa match {
+  final def toInvalid[A,B](fa: Maybe[A])(b: ⇒ B): A V B = fa match {
     case There(a) ⇒ Invalid(a)
     case NotThere ⇒ Valid(b)
   }

@@ -1,7 +1,7 @@
 package fun
 
 trait Monoid[A] extends Semigroup[A] {
-  def append(left: A, right: => A): A
+  def zero: A
 }
 
 object Monoid {
